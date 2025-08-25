@@ -41,6 +41,16 @@ pub async fn login(pool: web::Data<MySqlPool>, credentials: web::Json<LoginForm>
         }
     };
 
+    let delete_result = sqlx::query("DELETE FROM personal_access_tokens WHERE user_id = ?")
+        .bind(&user.id)
+        .execute(pool.get_ref())
+        .await;
+
+    if delete_result.is_err() {
+        return HttpResponse::InternalServerError()
+            .json(serde_json::json!({"error": "Failed to delete previous token"}));
+    }
+
     // Generate token UUID
     let token = Uuid::new_v4().to_string();
     let expires_at = Utc::now() + Duration::days(7);
